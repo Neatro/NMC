@@ -1,0 +1,192 @@
+@name New Mech Codec [NMC] Released
+@inputs Booty:entity Footy:array Poddy:wirelink
+@outputs 
+@persist Settings:table [Vel VelA]:array Instructions Speed StepHeight StepLength BodyOffsetFromGround Strafe Velle
+@persist T D V Turn T2 D2 Z [Down Dr2]:array Pound
+@trigger 
+
+#[ 
+    *************************************************************************************************************
+    
+    +--------------------------------------------+
+    |  Welcome to [NMC] Known as New Mech Codec  |
+    |                                            |
+    |        by Neatro                           |
+    +--------------------------------------------+
+    
+    
+    This is an experimental chip which may not work on every Mech
+    
+    The mechs can tip over w00t!
+    
+    Does not rely on rangers to walk!
+    
+    
+    +----------------+
+    |  Construction  |
+    +----------------+
+    
+    A mech is composed of a Hip (Booty), an array of feet (Footy) and a pod Controller.
+    
+    1. All props for these inputs must be aligned with the same angles. Meaning, if the Hip is at ang(0,0,0), All feet must face the exact same way.
+    
+    2. When you got all your props ready, put an adv ballsocket constraint between the Hip and all feet with the settings for -0.1 for all min's and 0.1 for all max's with free movement checked
+        You basically use the slave adv ballsocket setting.
+    
+    3. I recommend using cube props and not plated due to the nature of some functions.
+    
+    4. Balance your mech as much as possible
+    
+    5. Test the physics FIRST before making your mech
+    
+    6. Don't blame me if it doesn't work, this Mech chip is highly experimental.
+    
+    7. Don't make your mechs too large. 4x player size is the tested maximum size before it would spaz out.
+    
+    
+    +----------------------+
+    |  The Settings table  |
+    +----------------------+
+    
+    The first six settings:
+    
+    Speed: The speed of which the feet move
+    StepHeight: The height of which the feet will move vertically
+    Steplength: How far the feet will travel horizontally
+    Turn: The turning strength of the mech, the higher, the faster it turns.
+    Pound: The negated force at which the feet will land, Negative values will make it stomp harder while positive values will make the feet walk a bit softer
+    Instructions: "The amount of feet the mech has. This is just to measure when the mech will die if it loses a foot."
+    
+    The Settings table:
+    
+    Basically, its a configuration for every foot, this must be done manually
+    
+    Every foot has its own number, if you are using 4 feet, you need to make settings for all four feet.
+    
+    The 1st value is the Foot's Offset from the Hip.
+    The 2nd and 3rd value is the angular offset when walking, both 180 would make the foot start at the opposite of both 0
+    
+    The example shown below under #Bipedal is for two feet.
+    
+    +----------+
+    |  Wiring  |
+    +----------+
+    
+    Wire Booty to your Mech's Hip
+    
+    Wire Footy to an ADV Entity Marker with all your feet marked
+    
+    Wire Poddy to a pod controller
+    
+    
+    +--------------+
+    |  Disclaimer  |
+    +--------------+
+    
+    I cannot be held responsible for any damages caused by this chip, this including brain damage.
+    Modification is allowed,
+    Not for commercial purposes.    
+	Do not redistribute.
+    Don't complain if it doesn't work like you want it too, as i said two times before, it's experimental.
+    Please Credit if you use anything from this code or 
+    modify it to the point it barely even looks the same and
+    Please do not claim anything that isn't yours as your own! -Neatro.
+    
+    *************************************************************************************************************
+]#
+
+#By Neatro
+
+interval(30)
+if(first()|dupefinished()){
+    Speed=16 
+    StepHeight=12*2.3
+    StepLength=12*2
+    Turn=48*2
+    Pound=0
+    Instructions = 2
+    
+# Bipedal 
+    Settings[""+1,array]=array(vec(0,-24,-96)*1,0,0)
+    Settings[""+2,array]=array(vec(0,24,-96)*1,180,180)
+    
+    
+    
+    #Ignore from here on, please do not change anything unless you know what you are doing.
+    T=1
+    T2=1
+    for(A=1,Instructions){
+        Vel[T,vector]=Booty:pos()
+        VelA[T,vector]=Booty:pos()
+    }
+    
+    rangerFilter(Footy)
+    rangerFilter(Booty:getConstraints())
+    rangerPersist(1)
+    
+}
+V+=Speed*(Poddy["W",number]-Poddy["S",number])
+D=1
+
+Velle+=(Poddy["W",number]-Poddy["S",number])
+Velle=Velle*0.9
+
+Strafe+=(Poddy["A",number]-Poddy["D",number])
+Strafe=Strafe*0.9
+
+if(Instructions==Footy:count()&Poddy["Entity",entity]:isValid()){
+    while(perf(70)&D){
+        Data=Settings[""+T,array]
+        Offset=Data[1,vector]
+        Ox=Data[2,number]
+        Oy=Data[3,number]
+        
+        Angle=ang(0,0,0)
+        Sim=Footy[T,entity]
+        
+        Sim:applyForce(((Booty:toWorld(vec(0,0,Poddy["Space",number]*48)+Offset+vec(sin(V+Ox)*StepLength*(Velle/9),0,cos(V+Oy)*StepHeight*(Velle/9)):rotate(0,Strafe*5,0)))-Sim:pos()-(Sim:toWorldAxis(Booty:toLocalAxis(Sim:vel())-Sim:toLocalAxis(Booty:vel())))*0.06)*6*Sim:mass())
+        
+        Sim:applyAngForce((Sim:toLocal(Booty:toWorld(Angle))-(Sim:angVel()-Booty:angVel()*ang(0.5,1,0.5))*0.2)*Sim:mass()*8)
+        
+        Booty:applyForce(((Sim:toWorld(vec(0,0,Poddy["Space",number]*-48)-Offset-vec(sin(V+Ox)*StepLength*(Velle/9),0,cos(V+Oy)*StepHeight*(Velle/9)):rotate(0,Strafe*5,0)))-Booty:pos()-(Booty:toWorldAxis(Sim:toLocalAxis(Booty:vel())-Booty:toLocalAxis(Sim:vel())))*0.06+vec(0,0,0))*6/Instructions*Booty:mass())
+        Booty:applyAngForce(ang(0,Velle*sign(round(Strafe))*Turn/2,0)*Booty:mass()/Instructions/3)
+        
+        Booty:applyAngForce((Booty:toLocal(Sim:toWorld(Angle))-(Booty:angVel()-Sim:angVel()*ang(0,1,0.5))*0.3)*Booty:mass()*8/Instructions)
+        
+        #sound
+        #this sadly must use rangers :/
+        R=rangerOffset((Sim:boxSize():z()/2)+6,Sim:pos(),-Sim:up())
+        Dr2[T,number]=Down[T,number]
+        if(R:hit()){
+            Down[T,number]=1
+            if(Pound){
+                Sim:applyForce(Sim:up()*50*Sim:mass())
+            }
+        }
+        else{
+            Down[T,number]=0
+        }
+        if(Down[T,number]==1&(Down[T,number]!=Dr2[T,number])){
+            soundStop(T)
+            Sim:soundPlay(T,1,"NPC_dog.FootstepLeft")
+
+            soundPitch(T,60+random(-12,12))
+        }
+        
+        T++
+        if(T>Instructions){
+            T=1
+            D=0
+        }    
+    }
+    
+    Booty:applyAngForce(-Booty:angVel()*ang(0,0,1)*20*Booty:mass())
+    
+}
+else{
+    if(Z==0){
+        Z++
+        soundPurge()
+        Booty:soundPlay(0,0,"coast.thumper_shutdown")
+    }
+}
