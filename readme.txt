@@ -29,3 +29,5 @@
     Please do not claim anything that isn't yours as your own! -Neatro.
     
     ***********************************************************************************************************
+    
+    2020 edit: note that this project is nolonger updated
